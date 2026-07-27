@@ -32,8 +32,9 @@ The modules under `src/tiling/engine/` are independent of GNOME Shell APIs and c
 - translating engine geometry into Mutter frame operations;
 - synchronizing focus and fullscreen state;
 - managing the global scratchpad;
-- reconciling workspace renumbering and monitor changes; and
-- restoring in-memory state after a Shell disable/enable cycle.
+- checkpointing layout state before suspend;
+- reconciling workspace renumbering and settled monitor changes; and
+- restoring in-memory state after resume or a Shell disable/enable cycle.
 
 The adapter coalesces pending layout work into a `Meta.LaterType.RESIZE` pass. Target rectangles are recorded before frame operations so size acknowledgements can be distinguished from application-initiated changes. Retries are bounded for applications that constrain their size.
 
@@ -43,7 +44,7 @@ Tiling mode is selected per workspace. Workspaces without an explicit override f
 
 Each engine is keyed by `monitorIndex:workspaceIndex` and uses the monitor's work area from `src/helpers/screen.js`. Moving a tracked window to another workspace or monitor reroutes it to the corresponding engine. Disabling tiling for a workspace restores remembered free-window geometry.
 
-Monitor-layout changes rebuild engines from live windows. Nested structure and split fractions are not preserved across that rebuild.
+Monitor-layout changes snapshot and rehydrate engines against the current monitor and workspace routing. Unchanged suspend/resume setups preserve nested structure, split fractions, focus, floating state, and scratchpad state. If one old tree is split across multiple destinations or multiple trees collide on one destination, independently moved windows are adopted into the surviving destination layout.
 
 ## Command and layout flow
 

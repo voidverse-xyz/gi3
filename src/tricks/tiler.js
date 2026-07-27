@@ -16,6 +16,7 @@ import {
     slideActorFrom,
 } from '../helpers/shellUtils.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as LoginManager from 'resource:///org/gnome/shell/misc/loginManager.js';
 import { matchesCriteria } from '../tiling/config/criteriaMatch.js';
 import { DEFAULT_LAYOUT_OPTIONS, resolveFloatingRect } from '../tiling/engine/computeLayout.js';
 import { Engine } from '../tiling/engine/engine.js';
@@ -125,6 +126,10 @@ export default GObject.registerClass(
          *  renumbering can be diffed (old index -> new index) after the fact. */
         _workspaceSnapshot;
         _monitorsChangedSignal;
+        _loginManager;
+        _prepareForSleepSignal;
+        _screenChangeLaterId;
+        _screenChangeSessionState;
         _modeSettingSignal;
 
         constructor(keybinds, sessionState = null) {
@@ -144,6 +149,8 @@ export default GObject.registerClass(
             this._stateListeners = [];
             this._pendingKeys = new Set();
             this._applyLaterId = null;
+            this._screenChangeLaterId = null;
+            this._screenChangeSessionState = null;
             this._idleLaterIds = new Set();
             this._grab = null;
             this._scratchpad = [];
@@ -161,10 +168,10 @@ export default GObject.registerClass(
                 global.display.connect('grab-op-begin', (_d, window, op) => this._onGrabBegin(window, op)),
                 global.display.connect('grab-op-end', (_d, window, op) => this._onGrabEnd(window, op)),
                 global.display.connect('window-entered-monitor', (_d, _m, window) =>
-                    this._onWindowLocationMaybeChanged(window)
+                    this._onMonitorWindowLocationChanged(window)
                 ),
                 global.display.connect('window-left-monitor', (_d, _m, window) =>
-                    this._onWindowLocationMaybeChanged(window)
+                    this._onMonitorWindowLocationChanged(window)
                 ),
             ];
             this._workspaceChangedSignal = global.workspace_manager.connect('active-workspace-changed', () =>
@@ -177,6 +184,11 @@ export default GObject.registerClass(
             this._monitorsChangedSignal = global.backend
                 .get_monitor_manager()
                 .connect('monitors-changed', () => this._onScreenChange());
+            this._loginManager = LoginManager.getLoginManager();
+            this._prepareForSleepSignal = this._loginManager.connect(
+                'prepare-for-sleep',
+                (_manager, preparing) => this._onPrepareForSleep(preparing),
+            );
             // TILING_MODE is the DEFAULT mode for workspaces without an explicit override. When
             // the prefs switch changes it, recompute the coarse flag and reconcile the current
             // workspace if it still follows the default (so the switch behaves intuitively for a
@@ -483,6 +495,13 @@ export default GObject.registerClass(
          * screen is locked. MetaWindow references and signal ids must never cross that cycle.
          */
         snapshotSessionState() {
+            // A monitor transition may still be between the display-down and display-up
+            // events when GNOME disables the extension for lock. Keep the last complete tree
+            // captured before that transition rather than serializing temporary routing.
+            if (this._screenChangeSessionState) {
+                return this._screenChangeSessionState;
+            }
+
             let originals = {};
             for (let id of this._map.ids()) {
                 let rect = this._map.originalOf(id);
@@ -857,19 +876,106 @@ export default GObject.registerClass(
             this._scheduleApplyForActiveWorkspace();
         }
 
+        _onPrepareForSleep(preparing) {
+            if (!this._enabled) {
+                return;
+            }
+
+            this._captureScreenChangeSessionState();
+            if (!preparing) {
+                // With screen locking disabled the extension stays active and receives the
+                // resume half of PrepareForSleep. With locking enabled, disable()/enable()
+                // carries this snapshot across the lock-screen session instead.
+                this._onScreenChange();
+            }
+        }
+
+        _captureScreenChangeSessionState() {
+            if (this._screenChangeSessionState) {
+                return;
+            }
+
+            if (this._scratchpadVisibleId) {
+                this._rememberScratchpadRect(
+                    this._scratchpadVisibleId,
+                    this._map.get(this._scratchpadVisibleId),
+                );
+            }
+            this._screenChangeSessionState = this.snapshotSessionState();
+        }
+
         _onScreenChange() {
             if (!this._enabled) {
                 return;
             }
 
-            // Monitor indices can be renumbered when a monitor is added/removed, so rebuild
-            // every engine from scratch rather than trying to patch output rects in place.
-            this._rebuild();
-            this._scheduleApplyForActiveWorkspace();
+            // Suspend/resume commonly emits monitors-changed while displays power-cycle.
+            // Capture before per-window monitor signals can mutate the trees, then wait for
+            // Mutter's monitor and workspace routing to settle before rehydrating.
+            this._captureScreenChangeSessionState();
+            if (this._screenChangeLaterId !== null) {
+                laterRemove(this._screenChangeLaterId);
+                this._screenChangeLaterId = null;
+            }
+
+            // Restart the deferred pass for every monitor/window routing event so the last
+            // event in the burst determines the settled topology.
+            this._screenChangeLaterId = laterAdd(LaterType.RESIZE, () => {
+                this._screenChangeLaterId = null;
+                if (!this._screenRoutingReady()) {
+                    // Keep the pre-change snapshot. A display-up monitors-changed event will
+                    // retry after resume instead of flattening the layout while outputs are
+                    // absent or windows temporarily report monitor -1.
+                    return GLib.SOURCE_REMOVE;
+                }
+
+                let sessionState = this._screenChangeSessionState;
+                this._screenChangeSessionState = null;
+                this._rebuild(sessionState);
+                this._scheduleApplyForActiveWorkspace();
+                return GLib.SOURCE_REMOVE;
+            });
+        }
+
+        _screenRoutingReady() {
+            if (Main.layoutManager.monitors.length === 0) {
+                return false;
+            }
+
+            for (let [id] of this._windowLocation) {
+                let window = this._map.get(id);
+                if (!window || window.get_monitor() < 0 || !window.get_workspace()) {
+                    return false;
+                }
+                if (!this._outputForKey(this._keyForWindow(window))) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        _onMonitorWindowLocationChanged(window) {
+            if (!this._enabled || !window || !this._map.has(idOf(window))) {
+                return;
+            }
+
+            // Mutter emits per-window leave/enter signals before its public
+            // monitors-changed signal. Capture on the first one so the source tree has not
+            // already been incrementally rerouted and flattened.
+            this._captureScreenChangeSessionState();
+            this._onScreenChange();
         }
 
         _onWindowLocationMaybeChanged(window) {
             if (!this._enabled || !window || !this._map.has(idOf(window))) {
+                return;
+            }
+
+            if (this._screenChangeSessionState) {
+                // Keep the pre-change trees intact while Mutter routes every window. Each
+                // location event retries the deferred rehydrate; the last settled event wins.
+                this._onScreenChange();
                 return;
             }
 
@@ -956,11 +1062,7 @@ export default GObject.registerClass(
             state.signals = [
                 window.connect('size-changed', () => this._onSizeChanged(window)),
                 window.connect('position-changed', () => this._onPositionChanged(window)),
-                window.connect('workspace-changed', () => {
-                    if (this._enabled) {
-                        this._routeWindow(window);
-                    }
-                }),
+                window.connect('workspace-changed', () => this._onWindowLocationMaybeChanged(window)),
                 window.connect('notify::maximized-horizontally', () => this._onMaximized(window)),
                 window.connect('notify::maximized-vertically', () => this._onMaximized(window)),
                 window.connect('notify::minimized', () => this._onMinimizedChanged(window)),
@@ -1224,35 +1326,30 @@ export default GObject.registerClass(
             }
         }
 
-        _rebuild() {
-            if (this._scratchpadVisibleId) {
-                this._rememberScratchpadRect(
-                    this._scratchpadVisibleId,
-                    this._map.get(this._scratchpadVisibleId),
-                );
-            }
-
-            let originals = {};
-            for (let id of this._map.ids()) {
-                let rect = this._map.originalOf(id);
-                if (rect) {
-                    originals[id] = copyRect(rect);
+        _rebuild(sessionState = null) {
+            if (!sessionState) {
+                if (this._scratchpadVisibleId) {
+                    this._rememberScratchpadRect(
+                        this._scratchpadVisibleId,
+                        this._map.get(this._scratchpadVisibleId),
+                    );
                 }
+                sessionState = this.snapshotSessionState();
+            }
+            for (let id of this._map.ids()) {
                 this._untrack(id);
             }
             this._map.clear();
             this._engines.clear();
             this._windowLocation.clear();
+            this._scratchpad = [];
+            this._scratchpadVisibleId = null;
+            this._scratchpadRects.clear();
 
-            this._adoptExisting(originals);
-
-            let visibleId = this._scratchpadVisibleId;
-            let visibleWindow = visibleId ? this._map.get(visibleId) : null;
-            if (visibleId && visibleWindow) {
-                let rect = this._resolvedScratchpadRect(visibleId);
-                this._scratchpadRects.set(visibleId, copyRect(rect));
-                this._placeScratchpadWindow(visibleId, visibleWindow, rect);
-            }
+            // Rehydrate against current MetaWindow objects and monitor/workspace indices.
+            // _restoreExisting() preserves each engine when its surviving windows still share
+            // a destination key, then adopts genuinely new or independently moved windows.
+            this._restoreExisting(sessionState);
         }
 
         /** Type/flag checks that are valid even before first-frame. */
@@ -2189,6 +2286,10 @@ export default GObject.registerClass(
                 laterRemove(this._applyLaterId);
                 this._applyLaterId = null;
             }
+            if (this._screenChangeLaterId !== null) {
+                laterRemove(this._screenChangeLaterId);
+                this._screenChangeLaterId = null;
+            }
             for (let laterId of this._idleLaterIds) {
                 laterRemove(laterId);
             }
@@ -2207,6 +2308,8 @@ export default GObject.registerClass(
             }
             this._workspaceLayoutSignals = [];
             global.backend.get_monitor_manager().disconnect(this._monitorsChangedSignal);
+            this._loginManager?.disconnect(this._prepareForSleepSignal);
+            this._loginManager = null;
             Settings.reference?.disconnect(this._modeSettingSignal);
 
             for (let id of this._map.ids()) {
@@ -2223,6 +2326,7 @@ export default GObject.registerClass(
             this._geomStore = null;
             this._stateListeners = [];
 
+            this._screenChangeSessionState = null;
             this._keybinds = null;
         }
     }

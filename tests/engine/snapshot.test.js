@@ -82,4 +82,34 @@ describe('engine state snapshots', () => {
         assert.equal(restored.workspace.focus.kind, 'container');
         assert.equal(restored.focusedWindowId(), 'c');
     });
+
+    it('preserves topology and split ratios when the monitor work area changes', () => {
+        const options = { innerGap: 0, outerGap: 0 };
+        const engine = new Engine(OUTPUT, options);
+        engine.addWindow('a');
+        engine.addWindow('b');
+        engine.apply({ type: 'split', orientation: 'vertical' });
+        engine.addWindow('c');
+
+        engine.notifyFocused('b');
+        engine.apply({ type: 'resize', mode: 'grow', axis: 'height', amount: 0.15, unit: 'ppt' });
+        engine.notifyFocused('a');
+        engine.apply({ type: 'resize', mode: 'grow', axis: 'width', amount: 0.1, unit: 'ppt' });
+
+        const snapshot = JSON.parse(JSON.stringify(engine.snapshotState()));
+        const resumedOutput = { x: 100, y: 50, width: 1600, height: 900 };
+        const restored = Engine.fromStateSnapshot(resumedOutput, snapshot, options);
+        const geometries = restored.render().geometries;
+
+        assert.equal(tree(restored), 'H[a V[b c]]');
+        assert.deepEqual(restored.snapshotState(), snapshot);
+        assert.ok(geometries.get('a').width > geometries.get('b').width);
+        assert.ok(geometries.get('b').height > geometries.get('c').height);
+        for (const rect of geometries.values()) {
+            assert.ok(rect.x >= resumedOutput.x);
+            assert.ok(rect.y >= resumedOutput.y);
+            assert.ok(rect.x + rect.width <= resumedOutput.x + resumedOutput.width);
+            assert.ok(rect.y + rect.height <= resumedOutput.y + resumedOutput.height);
+        }
+    });
 });
