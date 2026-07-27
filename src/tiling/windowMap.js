@@ -1,13 +1,18 @@
 // Window-id bookkeeping shared by the tiling adapter. No policy, just lookup tables.
 
-/** @param {Meta.Rectangle} g @returns {import('./engine/computeLayout.js').Rect} */
-export function copyRect(g) {
-    return { x: g.x, y: g.y, width: g.width, height: g.height };
+/** @param {Meta.Rectangle} geometry @returns {import('./engine/computeLayout.js').Rect} */
+export function copyRect(geometry) {
+    return {
+        x: geometry.x,
+        y: geometry.y,
+        width: geometry.width,
+        height: geometry.height,
+    };
 }
 
-/** @param {Meta.Window} w */
-export function idOf(w) {
-    return String(w.get_id());
+/** @param {Meta.Window} window */
+export function idOf(window) {
+    return String(window.get_id());
 }
 
 export class WindowMap {
@@ -16,10 +21,12 @@ export class WindowMap {
     /** @type {Map<string, import('./engine/computeLayout.js').Rect>} */
     _original = new Map();
 
-    add(w) {
-        const id = idOf(w);
-        this._byId.set(id, w);
-        if (!this._original.has(id)) this._original.set(id, copyRect(w.get_frame_rect()));
+    add(window) {
+        const windowId = idOf(window);
+        this._byId.set(windowId, window);
+        if (!this._original.has(windowId)) {
+            this._original.set(windowId, copyRect(window.get_frame_rect()));
+        }
     }
 
     /**
@@ -28,21 +35,23 @@ export class WindowMap {
      * size at first-frame; otherwise untiling/turning tiling off shrinks them to that bogus
      * size.
      */
-    setOriginal(id, rect) {
-        if (this._byId.has(id)) this._original.set(id, rect);
+    setOriginal(windowId, rect) {
+        if (this._byId.has(windowId)) {
+            this._original.set(windowId, rect);
+        }
     }
 
-    remove(id) {
-        this._byId.delete(id);
-        this._original.delete(id);
+    remove(windowId) {
+        this._byId.delete(windowId);
+        this._original.delete(windowId);
     }
 
-    get(id) {
-        return this._byId.get(id);
+    get(windowId) {
+        return this._byId.get(windowId);
     }
 
-    has(id) {
-        return this._byId.has(id);
+    has(windowId) {
+        return this._byId.has(windowId);
     }
 
     ids() {
@@ -53,8 +62,8 @@ export class WindowMap {
         return Array.from(this._byId.values());
     }
 
-    originalOf(id) {
-        return this._original.get(id);
+    originalOf(windowId) {
+        return this._original.get(windowId);
     }
 
     clear() {

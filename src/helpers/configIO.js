@@ -14,34 +14,138 @@ import { swayComboToMutter, mutterAccelToSway } from '../tiling/keymap.js';
  * Order matters for import (first match wins) — entries are mutually exclusive here.
  * @type {Array<{key: string, command: string, match: (c: any) => boolean}>}
  */
-const S = Settings;
 const TABLE = [
-    { key: S.KEY_FOCUS_LEFT, command: 'focus left', match: (c) => c.type === 'focus' && c.dir === 'left' },
-    { key: S.KEY_FOCUS_RIGHT, command: 'focus right', match: (c) => c.type === 'focus' && c.dir === 'right' },
-    { key: S.KEY_FOCUS_UP, command: 'focus up', match: (c) => c.type === 'focus' && c.dir === 'up' },
-    { key: S.KEY_FOCUS_DOWN, command: 'focus down', match: (c) => c.type === 'focus' && c.dir === 'down' },
-
-    { key: S.KEY_MOVE_LEFT, command: 'move left', match: (c) => c.type === 'move' && c.dir === 'left' },
-    { key: S.KEY_MOVE_RIGHT, command: 'move right', match: (c) => c.type === 'move' && c.dir === 'right' },
-    { key: S.KEY_MOVE_UP, command: 'move up', match: (c) => c.type === 'move' && c.dir === 'up' },
-    { key: S.KEY_MOVE_DOWN, command: 'move down', match: (c) => c.type === 'move' && c.dir === 'down' },
-
-    { key: S.KEY_GROW_X, command: 'resize grow width 5 ppt', match: (c) => c.type === 'resize' && c.mode === 'grow' && c.axis === 'width' },
-    { key: S.KEY_SHRINK_X, command: 'resize shrink width 5 ppt', match: (c) => c.type === 'resize' && c.mode === 'shrink' && c.axis === 'width' },
-    { key: S.KEY_GROW_Y, command: 'resize grow height 5 ppt', match: (c) => c.type === 'resize' && c.mode === 'grow' && c.axis === 'height' },
-    { key: S.KEY_SHRINK_Y, command: 'resize shrink height 5 ppt', match: (c) => c.type === 'resize' && c.mode === 'shrink' && c.axis === 'height' },
-
-    { key: S.KEY_TILE_SPLIT_H, command: 'split h', match: (c) => c.type === 'split' && c.orientation === 'horizontal' },
-    { key: S.KEY_TILE_SPLIT_V, command: 'split v', match: (c) => c.type === 'split' && c.orientation === 'vertical' },
-    { key: S.KEY_TILE_LAYOUT_CYCLE, command: 'layout toggle split', match: (c) => c.type === 'layoutToggleSplit' || c.type === 'layout' },
-    { key: S.KEY_TILE_FOCUS_PARENT, command: 'focus parent', match: (c) => c.type === 'focusParent' },
-    { key: S.KEY_TILE_FOCUS_CHILD, command: 'focus child', match: (c) => c.type === 'focusChild' },
-    { key: S.KEY_TILE_TOGGLE_FLOATING, command: 'floating toggle', match: (c) => c.type === 'floatingToggle' },
-    { key: S.KEY_TILE_TOGGLE_FULLSCREEN, command: 'fullscreen', match: (c) => c.type === 'fullscreen' },
-    { key: S.KEY_TILE_MOVE_TO_WORKSPACE_NEXT, command: 'move container to workspace next', match: (c) => c.type === 'moveToWorkspace' && c.workspace === 'next' },
-    { key: S.KEY_TILE_MOVE_TO_WORKSPACE_PREV, command: 'move container to workspace prev', match: (c) => c.type === 'moveToWorkspace' && c.workspace === 'prev' },
-    { key: S.KEY_TILE_MOVE_TO_SCRATCHPAD, command: 'move scratchpad', match: (c) => c.type === 'moveScratchpad' },
-    { key: S.KEY_TILE_TOGGLE_SCRATCHPAD, command: 'scratchpad show', match: (c) => c.type === 'scratchpadShow' },
+    {
+        key: Settings.KEY_FOCUS_LEFT,
+        command: 'focus left',
+        match: (parsedCommand) => parsedCommand.type === 'focus' && parsedCommand.dir === 'left',
+    },
+    {
+        key: Settings.KEY_FOCUS_RIGHT,
+        command: 'focus right',
+        match: (parsedCommand) => parsedCommand.type === 'focus' && parsedCommand.dir === 'right',
+    },
+    {
+        key: Settings.KEY_FOCUS_UP,
+        command: 'focus up',
+        match: (parsedCommand) => parsedCommand.type === 'focus' && parsedCommand.dir === 'up',
+    },
+    {
+        key: Settings.KEY_FOCUS_DOWN,
+        command: 'focus down',
+        match: (parsedCommand) => parsedCommand.type === 'focus' && parsedCommand.dir === 'down',
+    },
+    {
+        key: Settings.KEY_MOVE_LEFT,
+        command: 'move left',
+        match: (parsedCommand) => parsedCommand.type === 'move' && parsedCommand.dir === 'left',
+    },
+    {
+        key: Settings.KEY_MOVE_RIGHT,
+        command: 'move right',
+        match: (parsedCommand) => parsedCommand.type === 'move' && parsedCommand.dir === 'right',
+    },
+    {
+        key: Settings.KEY_MOVE_UP,
+        command: 'move up',
+        match: (parsedCommand) => parsedCommand.type === 'move' && parsedCommand.dir === 'up',
+    },
+    {
+        key: Settings.KEY_MOVE_DOWN,
+        command: 'move down',
+        match: (parsedCommand) => parsedCommand.type === 'move' && parsedCommand.dir === 'down',
+    },
+    {
+        key: Settings.KEY_GROW_X,
+        command: 'resize grow width 5 ppt',
+        match: (parsedCommand) => (
+            parsedCommand.type === 'resize' &&
+            parsedCommand.mode === 'grow' &&
+            parsedCommand.axis === 'width'
+        ),
+    },
+    {
+        key: Settings.KEY_SHRINK_X,
+        command: 'resize shrink width 5 ppt',
+        match: (parsedCommand) => (
+            parsedCommand.type === 'resize' &&
+            parsedCommand.mode === 'shrink' &&
+            parsedCommand.axis === 'width'
+        ),
+    },
+    {
+        key: Settings.KEY_GROW_Y,
+        command: 'resize grow height 5 ppt',
+        match: (parsedCommand) => (
+            parsedCommand.type === 'resize' &&
+            parsedCommand.mode === 'grow' &&
+            parsedCommand.axis === 'height'
+        ),
+    },
+    {
+        key: Settings.KEY_SHRINK_Y,
+        command: 'resize shrink height 5 ppt',
+        match: (parsedCommand) => (
+            parsedCommand.type === 'resize' &&
+            parsedCommand.mode === 'shrink' &&
+            parsedCommand.axis === 'height'
+        ),
+    },
+    {
+        key: Settings.KEY_TILE_SPLIT_H,
+        command: 'split h',
+        match: (parsedCommand) => parsedCommand.type === 'split' && parsedCommand.orientation === 'horizontal',
+    },
+    {
+        key: Settings.KEY_TILE_SPLIT_V,
+        command: 'split v',
+        match: (parsedCommand) => parsedCommand.type === 'split' && parsedCommand.orientation === 'vertical',
+    },
+    {
+        key: Settings.KEY_TILE_LAYOUT_CYCLE,
+        command: 'layout toggle split',
+        match: (parsedCommand) => parsedCommand.type === 'layoutToggleSplit' || parsedCommand.type === 'layout',
+    },
+    {
+        key: Settings.KEY_TILE_FOCUS_PARENT,
+        command: 'focus parent',
+        match: (parsedCommand) => parsedCommand.type === 'focusParent',
+    },
+    {
+        key: Settings.KEY_TILE_FOCUS_CHILD,
+        command: 'focus child',
+        match: (parsedCommand) => parsedCommand.type === 'focusChild',
+    },
+    {
+        key: Settings.KEY_TILE_TOGGLE_FLOATING,
+        command: 'floating toggle',
+        match: (parsedCommand) => parsedCommand.type === 'floatingToggle',
+    },
+    {
+        key: Settings.KEY_TILE_TOGGLE_FULLSCREEN,
+        command: 'fullscreen',
+        match: (parsedCommand) => parsedCommand.type === 'fullscreen',
+    },
+    {
+        key: Settings.KEY_TILE_MOVE_TO_WORKSPACE_NEXT,
+        command: 'move container to workspace next',
+        match: (parsedCommand) => parsedCommand.type === 'moveToWorkspace' && parsedCommand.workspace === 'next',
+    },
+    {
+        key: Settings.KEY_TILE_MOVE_TO_WORKSPACE_PREV,
+        command: 'move container to workspace prev',
+        match: (parsedCommand) => parsedCommand.type === 'moveToWorkspace' && parsedCommand.workspace === 'prev',
+    },
+    {
+        key: Settings.KEY_TILE_MOVE_TO_SCRATCHPAD,
+        command: 'move scratchpad',
+        match: (parsedCommand) => parsedCommand.type === 'moveScratchpad',
+    },
+    {
+        key: Settings.KEY_TILE_TOGGLE_SCRATCHPAD,
+        command: 'scratchpad show',
+        match: (parsedCommand) => parsedCommand.type === 'scratchpadShow',
+    },
 ];
 
 export function keybindTable() {
@@ -59,7 +163,7 @@ export function parseKeybindConfig(text) {
         if (binding.command.type === 'nop') {
             continue;
         }
-        const entry = TABLE.find((e) => e.match(binding.command));
+        const entry = TABLE.find((candidate) => candidate.match(binding.command));
         const accelerator = entry ? swayComboToMutter(binding.combo) : null;
         if (entry && accelerator) {
             bindings.push({ key: entry.key, accelerator });

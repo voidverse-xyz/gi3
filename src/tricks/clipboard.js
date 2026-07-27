@@ -27,6 +27,10 @@ export default GObject.registerClass(
             this._lastItem = null;
             this._copyItems = [];
             this._keybinds = keybinds;
+
+            // Intentional EGO-A-005 access: clipboard history is a user-facing feature.
+            // Contents stay in memory, are never written to disk or sent over the network,
+            // and monitoring stops when this indicator is destroyed.
             this._clipboard = St.Clipboard.get_default();
 
             this._icon = new St.Icon({

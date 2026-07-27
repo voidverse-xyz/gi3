@@ -2,6 +2,10 @@ import Meta from 'gi://Meta';
 import Direction from '../enums/direction.js';
 import { rankDirectionCandidates } from './geometry.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Config from 'resource:///org/gnome/shell/misc/config.js';
+
+const SHELL_MAJOR_VERSION = Number.parseInt(Config.PACKAGE_VERSION, 10);
+const LEGACY_UNMAXIMIZE_ARGUMENTS = [Meta.MaximizeFlags.BOTH];
 
 export function getFocusedWindow() {
     let window = global.display.get_focus_window();
@@ -58,18 +62,13 @@ export function getWindowsInWorkspace(workspace, monitorIndex = null) {
     return windows;
 }
 
-// GNOME Shell 49 dropped the Meta.MaximizeFlags argument from unmaximize();
-// try the current no-arg signature first and fall back for 46-48.
-function unmaximize(metaWindow) {
-    try {
-        metaWindow.unmaximize();
-    } catch (e) {
-        metaWindow.unmaximize(Meta.MaximizeFlags.BOTH);
-    }
+export function unmaximizeWindow(metaWindow) {
+    const argumentsForShellVersion = SHELL_MAJOR_VERSION < 49 ? LEGACY_UNMAXIMIZE_ARGUMENTS : [];
+    metaWindow.unmaximize(...argumentsForShellVersion);
 }
 
 export function resizeWindow(window, size) {
-    unmaximize(window.ref);
+    unmaximizeWindow(window.ref);
     window.ref.move_frame(false, size.x, size.y);
     window.ref.move_resize_frame(false, size.x, size.y, size.width, size.height);
 }

@@ -28,21 +28,56 @@ const CPU_LABEL = 'CPU';
 const MEMORY_LABEL = 'MEM';
 const GPU_LABEL = 'GPU';
 
-function readFile(path) {
+async function readFile(path) {
+    const file = Gio.File.new_for_path(path);
+
     try {
-        const [ok, bytes] = GLib.file_get_contents(path);
-        return ok ? new TextDecoder().decode(bytes).trim() : null;
+        const [contentsLoaded, contents] = await new Promise((resolve, reject) => {
+            file.load_contents_async(null, (source, result) => {
+                try {
+                    resolve(source.load_contents_finish(result));
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        });
+
+        return contentsLoaded ? new TextDecoder().decode(contents).trim() : null;
     } catch {
         return null;
     }
 }
 
-function isLoopbackInterface(interfaceName) {
-    let flags = Number.parseInt(readFile(`/sys/class/net/${interfaceName}/flags`), 16);
+async function isLoopbackInterface(interfaceName) {
+    let contents = await readFile(`/sys/class/net/${interfaceName}/flags`);
+    let flags = Number.parseInt(contents, 16);
     if (Number.isFinite(flags)) {
         return (flags & LOOPBACK_INTERFACE_FLAG) !== 0;
     }
+
     return interfaceName === 'lo';
+}
+
+async function readNetworkCounters() {
+    let contents = await readFile('/proc/net/dev');
+    let counters = parseNetworkCounters(contents, () => false);
+    if (!counters) {
+        return null;
+    }
+
+    let loopbackChecks = counters.interfaces.map(async (networkInterface) => ({
+        name: networkInterface.name,
+        isLoopback: await isLoopbackInterface(networkInterface.name),
+    }));
+    let loopbackInterfaces = new Set(
+        (await Promise.all(loopbackChecks))
+            .filter((result) => result.isLoopback)
+            .map((result) => result.name),
+    );
+
+    return {
+        interfaces: counters.interfaces.filter((networkInterface) => !loopbackInterfaces.has(networkInterface.name)),
+    };
 }
 
 /** One tiny label + "42%" section of the system-monitor indicator. */
@@ -91,6 +126,7 @@ export const SysMonIndicator = GObject.registerClass(
         _prevNetwork = null;
         _prevNetworkTime = null;
         _gpuQueryRunning = false;
+        _updateRunning = false;
         _gpuFailures = 0;
 
         constructor(position) {
@@ -114,9 +150,9 @@ export const SysMonIndicator = GObject.registerClass(
 
             Main.panel.addToStatusArea('gi3-sysmon', this, position, 'right');
 
-            this._update();
+            void this._update();
             this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, POLL_SECONDS, () => {
-                this._update();
+                void this._update();
                 return GLib.SOURCE_CONTINUE;
             });
             this.connect('destroy', () => {
@@ -127,17 +163,28 @@ export const SysMonIndicator = GObject.registerClass(
             });
         }
 
-        _update() {
-            this._updateNetwork();
-            this._updateCpu();
-            this._updateMem();
-            if (this._gpu.visible) {
-                this._updateGpu();
+        async _update() {
+            if (this._updateRunning) {
+                return;
+            }
+
+            this._updateRunning = true;
+            try {
+                await Promise.all([
+                    this._updateNetwork(),
+                    this._updateCpu(),
+                    this._updateMem(),
+                ]);
+                if (this._gpu.visible) {
+                    this._updateGpu();
+                }
+            } finally {
+                this._updateRunning = false;
             }
         }
 
-        _updateNetwork() {
-            let counters = parseNetworkCounters(readFile('/proc/net/dev'), isLoopbackInterface);
+        async _updateNetwork() {
+            let counters = await readNetworkCounters();
             let now = GLib.get_monotonic_time();
             let elapsed = this._prevNetworkTime === null
                 ? 0
@@ -150,9 +197,10 @@ export const SysMonIndicator = GObject.registerClass(
             this._prevNetworkTime = counters ? now : null;
         }
 
-        _updateCpu() {
+        async _updateCpu() {
             // First /proc/stat line: cpu user nice system idle iowait irq softirq steal ...
-            let line = readFile('/proc/stat')?.split('\n')[0];
+            let contents = await readFile('/proc/stat');
+            let line = contents?.split('\n')[0];
             let fields = line?.split(/\s+/).slice(1).map(Number);
             if (!fields || fields.length < 8 || fields.some(isNaN)) {
                 return;
@@ -162,17 +210,17 @@ export const SysMonIndicator = GObject.registerClass(
             let total = busy + idle + iowait;
 
             if (this._prevCpu) {
-                let dTotal = total - this._prevCpu.total;
-                let dBusy = busy - this._prevCpu.busy;
-                if (dTotal > 0) {
-                    this._cpu.setLoad(dBusy / dTotal);
+                let totalDelta = total - this._prevCpu.total;
+                let busyDelta = busy - this._prevCpu.busy;
+                if (totalDelta > 0) {
+                    this._cpu.setLoad(busyDelta / totalDelta);
                 }
             }
             this._prevCpu = { busy, total };
         }
 
-        _updateMem() {
-            let info = readFile('/proc/meminfo');
+        async _updateMem() {
+            let info = await readFile('/proc/meminfo');
             let total = Number(info?.match(/^MemTotal:\s+(\d+)/m)?.[1]);
             let available = Number(info?.match(/^MemAvailable:\s+(\d+)/m)?.[1]);
             if (!total || isNaN(available)) {
@@ -224,7 +272,7 @@ export const SysMonIndicator = GObject.registerClass(
 );
 
 /** @returns {Array<{id: string, name: string, temp: number}>} all plausible hwmon temperatures */
-function readSensors() {
+async function readSensors() {
     let sensors = [];
     let base = '/sys/class/hwmon';
     let dir;
@@ -236,7 +284,7 @@ function readSensors() {
     let entry;
     while ((entry = dir.read_name()) !== null) {
         let chipDir = `${base}/${entry}`;
-        let chip = readFile(`${chipDir}/name`) ?? entry;
+        let chip = await readFile(`${chipDir}/name`) ?? entry;
         let files;
         try {
             let d = GLib.Dir.open(chipDir, 0);
@@ -254,7 +302,7 @@ function readSensors() {
             if (!m) {
                 continue;
             }
-            let raw = Number(readFile(`${chipDir}/${file}`));
+            let raw = Number(await readFile(`${chipDir}/${file}`));
             if (isNaN(raw)) {
                 continue;
             }
@@ -262,7 +310,7 @@ function readSensors() {
             if (temp < TEMP_SANE_MIN || temp > TEMP_SANE_MAX) {
                 continue;
             }
-            let label = readFile(`${chipDir}/temp${m[1]}_label`);
+            let label = await readFile(`${chipDir}/temp${m[1]}_label`);
             sensors.push({
                 id: `${entry}/temp${m[1]}`,
                 name: label ? `${chip} · ${label}` : `${chip} · temp${m[1]}`,
@@ -278,6 +326,7 @@ function readSensors() {
 export const TempsIndicator = GObject.registerClass(
     class TempsIndicator extends PanelMenu.Button {
         _timeoutId = null;
+        _updateRunning = false;
         _workareasSignal = null;
 
         constructor(position) {
@@ -318,9 +367,9 @@ export const TempsIndicator = GObject.registerClass(
 
             Main.panel.addToStatusArea('gi3-temps', this, position, 'right');
 
-            this._update();
+            void this._update();
             this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, POLL_SECONDS, () => {
-                this._update();
+                void this._update();
                 return GLib.SOURCE_CONTINUE;
             });
             this.connect('destroy', () => {
@@ -335,27 +384,40 @@ export const TempsIndicator = GObject.registerClass(
             });
         }
 
-        _update() {
-            let sensors = readSensors();
-            if (sensors.length === 0) {
-                // No hwmon (VM, container): keep the indicator out of the bar entirely.
-                this.visible = false;
+        async _update() {
+            if (this._updateRunning) {
                 return;
             }
-            this.visible = true;
 
-            let hottest = sensors.reduce((a, b) => (b.temp > a.temp ? b : a));
-            this._label.text = `${Math.round(hottest.temp)}°C`;
-            if (hottest.temp >= TEMP_HIGH) {
-                this._label.add_style_class_name('gi3-high');
-            } else {
-                this._label.remove_style_class_name('gi3-high');
+            this._updateRunning = true;
+            try {
+                let sensors = await readSensors();
+                if (sensors.length === 0) {
+                    // No hwmon (VM, container): keep the indicator out of the bar entirely.
+                    this.visible = false;
+                    return;
+                }
+                this.visible = true;
+
+                let hottest = sensors.reduce((hottestSensor, sensor) => (
+                    sensor.temp > hottestSensor.temp ? sensor : hottestSensor
+                ));
+                this._label.text = `${Math.round(hottest.temp)}°C`;
+                if (hottest.temp >= TEMP_HIGH) {
+                    this._label.add_style_class_name('gi3-high');
+                } else {
+                    this._label.remove_style_class_name('gi3-high');
+                }
+                this.set_accessible_name(
+                    `Temperatures (hottest ${Math.round(hottest.temp)}°C, ${hottest.name})`,
+                );
+
+                // NB: the menu must be populated at all times — PopupMenu.open() refuses to
+                // open an empty menu, so building rows lazily on open would deadlock it shut.
+                this._syncMenu(sensors);
+            } finally {
+                this._updateRunning = false;
             }
-            this.set_accessible_name(`Temperatures (hottest ${Math.round(hottest.temp)}°C, ${hottest.name})`);
-
-            // NB: the menu must be populated at all times — PopupMenu.open() refuses to
-            // open an empty menu, so building rows lazily on open would deadlock it shut.
-            this._syncMenu(sensors);
         }
 
         _syncMenu(sensors) {

@@ -21,6 +21,7 @@ import { DEFAULT_LAYOUT_OPTIONS, resolveFloatingRect } from '../tiling/engine/co
 import { Engine } from '../tiling/engine/engine.js';
 import { isContainer } from '../tiling/engine/tree.js';
 import { copyRect, idOf, WindowMap } from '../tiling/windowMap.js';
+import { unmaximizeWindow } from '../helpers/window.js';
 import { GeomStore } from '../helpers/geomStore.js';
 
 const LAYOUT_CYCLE_ORDER = ['splith', 'splitv'];
@@ -1811,17 +1812,11 @@ export default GObject.registerClass(
             return window.maximized_horizontally || window.maximized_vertically;
         }
 
-        // GNOME Shell 49 dropped the Meta.MaximizeFlags argument from unmaximize();
-        // try the current no-arg signature first and fall back for 46-48.
         _unmaximize(window) {
             if (!this._isMaximized(window)) {
                 return;
             }
-            try {
-                window.unmaximize();
-            } catch (_e) {
-                window.unmaximize(Meta.MaximizeFlags.BOTH);
-            }
+            unmaximizeWindow(window);
         }
 
         _fullscreenWindowId(engine) {
