@@ -100,8 +100,8 @@ log out and back in, then enable with `gnome-extensions enable gi3@voidverse.xyz
 
 ### Packaging a zip
 
-`./package.sh` creates the release archive `gi3.zip` from `src/` and compiles the
-GSettings schema in a temporary staging directory.
+`./package.sh` creates the release archive `gi3.zip` from `src/`. It includes the
+schema XML but excludes the generated `schemas/gschemas.compiled` file.
 
 ## Development
 

@@ -23,9 +23,6 @@ rm -f "${STAGE}/schemas/gschemas.compiled"
 
 echo "Building gi3 production package..."
 
-# Compile the schema into the stage so the ZIP installs directly.
-glib-compile-schemas "${STAGE}/schemas/"
-
 rm -f "${OUT}"
 python3 - "${STAGE}" "${OUT}" <<'PY'
 import sys

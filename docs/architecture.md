@@ -95,5 +95,5 @@ The runtime can apply rule objects already stored in the `tiling-rules-json` set
 ## Testing and packaging
 
 - `npm test` runs the pure JavaScript suite under `tests/` with Node's built-in test runner.
-- `./package.sh` copies the release contents of `src/`, compiles the GSettings schema in a temporary staging directory, and writes `gi3.zip`.
+- `./package.sh` copies the release contents of `src/`, excludes the generated `schemas/gschemas.compiled` file, and writes `gi3.zip`.
 - `./install.sh` builds the release archive and installs it with `gnome-extensions`.
