@@ -1,0 +1,82 @@
+.bar-app-icon {
+    margin-left: 2.5px;
+    margin-right: 2.5px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+/* Clipboard history dropdown */
+.clipboard-menu {
+    min-width: 320px;
+}
+
+.clipboard-header {
+    padding-top: 10px;
+    padding-bottom: 4px;
+}
+
+.clipboard-title {
+    font-weight: bold;
+    font-size: 1.05em;
+}
+
+.clipboard-count {
+    color: rgba(255, 255, 255, 0.55);
+    font-feature-settings: "tnum";
+    margin-right: 6px;
+}
+
+.clipboard-empty {
+    color: rgba(255, 255, 255, 0.55);
+    font-style: italic;
+}
+
+.clipboard-item {
+    spacing: 8px;
+}
+
+.clipboard-ordinal {
+    min-width: 1.4em;
+    text-align: right;
+    color: rgba(255, 255, 255, 0.45);
+    font-feature-settings: "tnum";
+}
+
+.clipboard-label {
+    max-width: 360px;
+}
+
+.clipboard-icon-button {
+    border-radius: 99px;
+    padding: 4px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.clipboard-icon-button:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: white;
+}
+
+/* --- system monitor / temperature indicators ------------------------------------- */
+
+.gi3-sysmon-section {
+    spacing: 3px;
+    padding: 0 5px;
+}
+
+.gi3-sysmon-metric {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.72em;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding-top: 1px; /* optical centering beside the larger percentage value */
+}
+
+.gi3-sysmon-value {
+    font-size: 0.9em;
+    font-feature-settings: "tnum"; /* tabular digits: no jitter as values change */
+}
+
+.gi3-high {
+    color: #ff7b63;
+}

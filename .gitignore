@@ -1,0 +1,6 @@
+reference/
+dev/shots/
+demo/
+node_modules/
+src/schemas/gschemas.compiled
+gi3.zip

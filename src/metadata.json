@@ -1,0 +1,15 @@
+{
+    "name": "gi3",
+    "description": "gi3 — an i3/sway-style manual tiler for GNOME: per-workspace tiling mode, splits, gaps, scratchpad, window rules and i3 config import, plus directional focus/move/snap/resize for floating windows, clipboard history and an app tray.",
+    "version": 1,
+    "uuid": "gi3@voidverse.xyz",
+    "url": "https://github.com/voidverse-xyz/gi3",
+    "settings-schema": "org.gnome.shell.extensions.gi3",
+    "shell-version": [
+        "46",
+        "47",
+        "48",
+        "49",
+        "50"
+    ]
+}

@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gnome-shell-extensions">
+    <schema path="/org/gnome/shell/extensions/gi3/" id="org.gnome.shell.extensions.gi3">
+        <key name="window-adjust-amount" type="u">
+            <default>15</default>
+            <summary>Window adjust amount.</summary>
+            <description>Window adjust amount.</description>
+        </key>
+        <key name="original-size-mode" type="b">
+            <default>true</default>
+            <summary>Keep original window size when switched.</summary>
+            <description>Keep original window size when switched.</description>
+        </key>
+		<key name="clipboard-state" type="b">
+            <default>true</default>
+            <summary>Enable clipbaord history.</summary>
+            <description>Show clipbaord history indicator.</description>
+        </key>
+		<key name="app-tray-state" type="b">
+            <default>true</default>
+            <summary>Enable app tray.</summary>
+            <description>Show app tray indicator.</description>
+        </key>
+		<key name="sysmon-state" type="b">
+			<default>true</default>
+			<summary>Show the system monitor indicator</summary>
+			<description>Top-bar network transfer rates, CPU/memory usage, and NVIDIA GPU usage when nvidia-smi is available.</description>
+		</key>
+		<key name="temps-state" type="b">
+			<default>true</default>
+			<summary>Show the temperature indicator</summary>
+			<description>Hottest sensor in the top bar; the menu lists every available sensor.</description>
+		</key>
+		<key name="app-tray-icon-size" type="u">
+            <default>20</default>
+            <summary>App tray app icon size.</summary>
+            <description>App tray app icon size.</description>
+        </key>
+
+        <!-- TILING SETTINGS -->
+        <key name="tiling-mode" type="b">
+            <default>true</default>
+            <summary>Default tiling mode for workspaces.</summary>
+            <description>Whether a workspace tiles by default, until its mode is toggled from the top bar. Per-workspace overrides are stored in tiling-workspace-modes.</description>
+        </key>
+        <key name="tiling-workspace-modes" type="s">
+            <default>'{}'</default>
+            <summary>Per-workspace tiling mode overrides (JSON).</summary>
+            <description>JSON object mapping workspace index to a boolean tiling mode, e.g. {"0":true,"1":false}. Workspaces without an entry follow tiling-mode.</description>
+        </key>
+        <key name="tiling-warp-pointer" type="b">
+            <default>false</default>
+            <summary>Move the pointer to the focused window's centre.</summary>
+            <description>When tiling, warp the mouse pointer to the centre of the focused window so it follows keyboard focus.</description>
+        </key>
+        <key name="tiling-gaps-inner" type="u">
+            <default>30</default>
+            <summary>Gap between tiled windows, in pixels.</summary>
+            <description>Gap between tiled windows, in pixels.</description>
+        </key>
+        <key name="tiling-gaps-outer" type="u">
+            <default>0</default>
+            <summary>Gap between tiled windows and the screen edge, in pixels.</summary>
+            <description>Gap between tiled windows and the screen edge, in pixels.</description>
+        </key>
+        <key name="tiling-default-layout" type="s">
+            <default>'splith'</default>
+            <summary>Default layout for new tiling containers.</summary>
+            <description>One of splith, splitv.</description>
+        </key>
+        <key name="tiling-rules-json" type="s">
+            <default>'[]'</default>
+            <summary>Imported for_window/assign rules, serialized as JSON.</summary>
+            <description>Imported for_window/assign rules, serialized as JSON.</description>
+        </key>
+        <key name="scratchpad-visible" type="b">
+            <default>false</default>
+            <summary>Whether a scratchpad window is currently shown.</summary>
+            <description>Whether a scratchpad window is currently shown.</description>
+        </key>
+        <key name="tiling-overridden-state" type="s">
+            <default>''</default>
+            <summary>Persisted backup of GNOME shortcuts/features the tiler overrides.</summary>
+            <description>Internal: JSON snapshot of the GNOME keybindings and mutter flags cleared while tiling is on, so they survive an unclean shutdown and can be restored.</description>
+        </key>
+        <key name="keybind-overridden-state" type="s">
+            <default>''</default>
+            <summary>Persisted backup of GNOME shortcuts cleared for the whole extension.</summary>
+            <description>Internal: JSON snapshot of the GNOME keybindings (Super+H minimize, Super+L screensaver) cleared whenever the extension is loaded, since those keys drive directional focus in both free and tiling modes.</description>
+        </key>
+        <key name="tiling-restore-app-size" type="b">
+            <default>false</default>
+            <summary>Reopen apps at their pre-tiling size.</summary>
+            <description>Remember each app's natural size before it is tiled, and re-apply it when a window of that app later opens while tiling is off — so an app closed while tiled does not reopen at its small grid size.</description>
+        </key>
+
+        <!-- CENTER WINDOW KEYBIND -->
+        <key name="center-window-hotkey" type="as">
+			<default><![CDATA[['<Ctrl><Super>W']]]></default>
+			<summary>Tile windows opened in current workspace.</summary>
+		</key>
+
+		<!-- OPEN CLIPBOARD KEYBIND -->
+        <key name="clipboard-hotkey" type="as">
+			<default><![CDATA[['<Super><Shift>V']]]></default>
+			<summary>Open clipboard.</summary>
+		</key>
+
+        <!-- CENTER WINDOWS KEYBIND -->
+        <key name="center-windows-hotkey" type="as">
+			<default><![CDATA[['<Shift><Super>W']]]></default>
+			<summary>Centers windows opened in current workspace.</summary>
+		</key>
+
+		<!-- CENTER WORKSPACE KEYBIND -->
+        <key name="center-workspace-hotkey" type="as">
+			<default><![CDATA[['<Ctrl><Alt><Super>W']]]></default>
+			<summary>Centers windows opened in current workspace.</summary>
+		</key>
+
+        <!-- FOCUS KEYBIND -->
+        <key name="focus-right-hotkey" type="as">
+			<default><![CDATA[['<Super>L']]]></default>
+			<summary>Focus right of current window.</summary>
+		</key>
+        <key name="focus-left-hotkey" type="as">
+			<default><![CDATA[['<Super>H']]]></default>
+			<summary>Focus left of current window.</summary>
+		</key>
+        <key name="focus-up-hotkey" type="as">
+			<default><![CDATA[['<Super>K']]]></default>
+			<summary>Focus up of current window.</summary>
+		</key>
+        <key name="focus-down-hotkey" type="as">
+			<default><![CDATA[['<Super>J']]]></default>
+			<summary>Focus down of current window.</summary>
+		</key>
+
+        <!-- SWITCH KEYBIND -->
+        <key name="switch-right-hotkey" type="as">
+			<default><![CDATA[['<Ctrl><Alt><Super>L']]]></default>
+			<summary>Switch current window with right window.</summary>
+		</key>
+        <key name="switch-left-hotkey" type="as">
+			<default><![CDATA[['<Ctrl><Alt><Super>H']]]></default>
+			<summary>Switch current window with left window.</summary>
+		</key>
+        <key name="switch-up-hotkey" type="as">
+			<default><![CDATA[['<Ctrl><Alt><Super>K']]]></default>
+			<summary>Switch current window with up window.</summary>
+		</key>
+        <key name="switch-down-hotkey" type="as">
+			<default><![CDATA[['<Ctrl><Alt><Super>J']]]></default>
+			<summary>Switch current window with down window.</summary>
+		</key>
+
+        <!-- MOVE KEYBIND -->
+        <key name="move-right-hotkey" type="as">
+			<default><![CDATA[['<Shift><Super>L']]]></default>
+			<summary>Move right the focused window.</summary>
+		</key>
+        <key name="move-left-hotkey" type="as">
+			<default><![CDATA[['<Shift><Super>H']]]></default>
+			<summary>Move left the focused window.</summary>
+		</key>
+        <key name="move-up-hotkey" type="as">
+			<default><![CDATA[['<Shift><Super>K']]]></default>
+			<summary>Move up the focused window.</summary>
+		</key>
+        <key name="move-down-hotkey" type="as">
+			<default><![CDATA[['<Shift><Super>J']]]></default>
+			<summary>Move down the focused window.</summary>
+		</key>
+
+        <!-- RESIZE KEYBIND -->
+        <key name="shrink-x-hotkey" type="as">
+			<default><![CDATA[['<Alt><Super>H']]]></default>
+			<summary>Shrink focused window in X axis.</summary>
+		</key>
+        <key name="grow-x-hotkey" type="as">
+			<default><![CDATA[['<Alt><Super>L']]]></default>
+			<summary>Grow focused window in X axis.</summary>
+		</key>
+        <key name="shrink-y-hotkey" type="as">
+			<default><![CDATA[['<Alt><Super>K']]]></default>
+			<summary>Shrink focused window in Y axis.</summary>
+		</key>
+        <key name="grow-y-hotkey" type="as">
+			<default><![CDATA[['<Alt><Super>J']]]></default>
+			<summary>Grow focused window in Y axis</summary>
+		</key>
+
+        <!-- SNAPPER KEYBIND -->
+        <key name="snap-right-hotkey" type="as">
+			<default><![CDATA[['<Shift><Ctrl><Super>L']]]></default>
+			<summary>Snap focused window right.</summary>
+		</key>
+        <key name="snap-left-hotkey" type="as">
+			<default><![CDATA[['<Shift><Ctrl><Super>H']]]></default>
+			<summary>Snap focused window left.</summary>
+		</key>
+        <key name="snap-up-hotkey" type="as">
+			<default><![CDATA[['<Shift><Ctrl><Super>K']]]></default>
+			<summary>Snap focused window up.</summary>
+		</key>
+        <key name="snap-down-hotkey" type="as">
+			<default><![CDATA[['<Shift><Ctrl><Super>J']]]></default>
+			<summary>Snap focused window down.</summary>
+		</key>
+
+        <!--
+            TILING KEYBINDS
+
+            Defaults mirror the maintainer's Sway config (i3/sway muscle memory):
+              $mod+b/v      split horizontal / vertical
+              $mod+w        toggle split layout
+              $mod+a        focus parent   (Shift+$mod+a focuses the child; no sway binding)
+              $mod+f        fullscreen
+              $mod+ctrl+space  floating toggle
+              $mod+minus / Shift+$mod+minus   show / move-to scratchpad
+              $mod+t        toggle tiling mode (no sway analog)
+              $mod+alt+c    reload imported config (sway's reload key)
+              Shift+$mod+[ / ]   inner-gap grow / shrink (echoes sway's gap keys)
+
+            Directional FOCUS/MOVE/RESIZE are intentionally EMPTY here — the free-form
+            focus-*/move-*/resize keys ($mod+h/j/k/l and modifier variants, defined above)
+            own those accelerators and delegate into the tiling tree when the focused window
+            is tiled, so a single binding works in both tiled and floating states (as in sway).
+
+            Sway's bare $mod+h and $mod+a collide with GNOME's own minimize / app-grid
+            shortcuts. Rather than dodge them, ConflictingShellFeatures (helpers/shellUtils.js)
+            clears those two GNOME bindings while tiling mode is on and restores them when it
+            turns off. Arrow-key duplicates from the sway config are omitted to avoid
+            clobbering GNOME's maximize/unmaximize/toggle-tiled (Super+Up/Down/Left/Right).
+
+            Watch for keysym *aliasing*, not just literal matches: switch-group defaults to
+            <Super>Above_Tab (the grave/backtick key on US layouts), which is why the
+            scratchpad keys avoid <Super>grave.
+        -->
+        <key name="tile-split-h-hotkey" type="as">
+			<default><![CDATA[['<Super>B']]]></default>
+			<summary>Split the focused tiled container horizontally.</summary>
+		</key>
+        <key name="tile-split-v-hotkey" type="as">
+			<default><![CDATA[['<Super>V']]]></default>
+			<summary>Split the focused tiled container vertically.</summary>
+		</key>
+        <key name="tile-layout-cycle-hotkey" type="as">
+			<default><![CDATA[['<Super>W']]]></default>
+			<summary>Toggle the focused container's layout between splith and splitv.</summary>
+		</key>
+        <key name="tile-move-right-hotkey" type="as">
+			<default><![CDATA[[]]]></default>
+			<summary>Move the focused tiled window right within the tree.</summary>
+		</key>
+        <key name="tile-move-left-hotkey" type="as">
+			<default><![CDATA[[]]]></default>
+			<summary>Move the focused tiled window left within the tree.</summary>
+		</key>
+        <key name="tile-move-up-hotkey" type="as">
+			<default><![CDATA[[]]]></default>
+			<summary>Move the focused tiled window up within the tree.</summary>
+		</key>
+        <key name="tile-move-down-hotkey" type="as">
+			<default><![CDATA[[]]]></default>
+			<summary>Move the focused tiled window down within the tree.</summary>
+		</key>
+        <key name="tile-focus-right-hotkey" type="as">
+			<default><![CDATA[[]]]></default>
+			<summary>Focus right within the tiling tree.</summary>
+		</key>
+        <key name="tile-focus-left-hotkey" type="as">
+			<default><![CDATA[[]]]></default>
+			<summary>Focus left within the tiling tree.</summary>
+		</key>
+        <key name="tile-focus-up-hotkey" type="as">
+			<default><![CDATA[[]]]></default>
+			<summary>Focus up within the tiling tree.</summary>
+		</key>
+        <key name="tile-focus-down-hotkey" type="as">
+			<default><![CDATA[[]]]></default>
+			<summary>Focus down within the tiling tree.</summary>
+		</key>
+        <key name="tile-focus-parent-hotkey" type="as">
+			<default><![CDATA[['<Super>A']]]></default>
+			<summary>Focus the parent container.</summary>
+		</key>
+        <key name="tile-focus-child-hotkey" type="as">
+			<default><![CDATA[['<Shift><Super>A']]]></default>
+			<summary>Focus the focused container's child.</summary>
+		</key>
+        <key name="tile-toggle-floating-hotkey" type="as">
+			<default><![CDATA[['<Ctrl><Super>space']]]></default>
+			<summary>Toggle floating for the focused window.</summary>
+		</key>
+        <key name="tile-toggle-fullscreen-hotkey" type="as">
+			<default><![CDATA[['<Super>F']]]></default>
+			<summary>Toggle fullscreen for the focused window.</summary>
+		</key>
+        <key name="tile-move-to-workspace-next-hotkey" type="as">
+			<default><![CDATA[['<Ctrl><Super>Page_Down']]]></default>
+			<summary>Move the focused window to the next workspace.</summary>
+		</key>
+        <key name="tile-move-to-workspace-prev-hotkey" type="as">
+			<default><![CDATA[['<Ctrl><Super>Page_Up']]]></default>
+			<summary>Move the focused window to the previous workspace.</summary>
+		</key>
+        <key name="tile-gap-increase-hotkey" type="as">
+			<default><![CDATA[['<Shift><Super>bracketleft']]]></default>
+			<summary>Increase the inner gap between tiled windows.</summary>
+		</key>
+        <key name="tile-gap-decrease-hotkey" type="as">
+			<default><![CDATA[['<Shift><Super>bracketright']]]></default>
+			<summary>Decrease the inner gap between tiled windows.</summary>
+		</key>
+        <key name="tile-toggle-mode-hotkey" type="as">
+			<default><![CDATA[['<Super>T']]]></default>
+			<summary>Toggle tiling mode on or off.</summary>
+		</key>
+        <key name="tile-move-to-scratchpad-hotkey" type="as">
+			<default><![CDATA[['<Shift><Super>minus']]]></default>
+			<summary>Move the focused window to the scratchpad.</summary>
+		</key>
+        <key name="tile-toggle-scratchpad-hotkey" type="as">
+			<default><![CDATA[['<Super>minus']]]></default>
+			<summary>Show or hide the scratchpad window.</summary>
+		</key>
+        <key name="tile-cycle-scratchpad-hotkey" type="as">
+			<default><![CDATA[['<Ctrl><Super>minus']]]></default>
+			<summary>Cycle directly to the next scratchpad window.</summary>
+		</key>
+    </schema>
+</schemalist>
