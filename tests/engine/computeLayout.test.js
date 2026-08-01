@@ -70,6 +70,23 @@ describe('computeLayout geometry', () => {
         assert.deepEqual(g.get('b'), { x: 500, y: 0, width: 500, height: 500 });
         assert.deepEqual(g.get('c'), { x: 500, y: 500, width: 500, height: 500 });
     });
+
+    it('keeps four panes in a nested vertical split from overlapping', () => {
+        const e = engineWith({ innerGap: 10 });
+        e.addWindow('a');
+        e.addWindow('b');
+        e.apply({ type: 'split', orientation: 'vertical' });
+        e.addWindow('c');
+        e.addWindow('d');
+        e.addWindow('e');
+        const g = e.render().geometries;
+
+        assert.deepEqual(g.get('a'), { x: 0, y: 0, width: 495, height: 1000 });
+        assert.deepEqual(g.get('b'), { x: 505, y: 0, width: 495, height: 243 });
+        assert.deepEqual(g.get('c'), { x: 505, y: 253, width: 495, height: 243 });
+        assert.deepEqual(g.get('d'), { x: 505, y: 506, width: 495, height: 243 });
+        assert.deepEqual(g.get('e'), { x: 505, y: 759, width: 495, height: 241 });
+    });
 });
 
 describe('floating geometry restoration', () => {

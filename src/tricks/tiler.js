@@ -1467,21 +1467,28 @@ export default GObject.registerClass(
                     return GLib.SOURCE_REMOVE;
                 }
 
-                let f = window.get_frame_rect();
-                if (f.x === target.x && f.y === target.y) {
-                    state.posRetries = 0;
-                    this._maybeSettle(window, state);
-                    return GLib.SOURCE_REMOVE;
-                }
-                // Mutter sometimes bounces a frame move back to its old position; re-assert
-                // with a bounded retry so a stubborn client can't trap us in a loop.
-                if (state.posRetries >= MAX_REASSERTS) {
-                    return GLib.SOURCE_REMOVE;
-                }
-                state.posRetries += 1;
-                window.move_frame(true, target.x, target.y);
+                this._reassertPosition(window, state);
                 return GLib.SOURCE_REMOVE;
             });
+        }
+
+        _reassertPosition(window, state) {
+            let target = state.targetRect;
+            let f = window.get_frame_rect();
+            if (f.x === target.x && f.y === target.y) {
+                state.posRetries = 0;
+                this._maybeSettle(window, state);
+                return;
+            }
+
+            // A resize acknowledgement does not guarantee a position-changed signal. This
+            // matters when inserting into a vertical split: an existing pane can accept its
+            // new height but remain at the old y coordinate, overlapping its next sibling.
+            if (state.posRetries >= MAX_REASSERTS) {
+                return;
+            }
+            state.posRetries += 1;
+            window.move_frame(true, target.x, target.y);
         }
 
         _classifyGeometryEvent(window) {
@@ -1502,9 +1509,11 @@ export default GObject.registerClass(
 
             let f = window.get_frame_rect();
             if (f.width === target.width && f.height === target.height) {
-                // Our own resize round-trip completing (position handled separately).
+                // Our own resize round-trip completed. Mutter may acknowledge the size
+                // without emitting position-changed, so repair the position from this path
+                // too instead of leaving vertically stacked panes at stale y coordinates.
                 state.reasserts = 0;
-                this._maybeSettle(window, state);
+                this._reassertPosition(window, state);
                 return GLib.SOURCE_REMOVE;
             }
 
