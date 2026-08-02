@@ -21,6 +21,7 @@ import { matchesCriteria } from '../tiling/config/criteriaMatch.js';
 import { DEFAULT_LAYOUT_OPTIONS, resolveFloatingRect } from '../tiling/engine/computeLayout.js';
 import { Engine } from '../tiling/engine/engine.js';
 import { isContainer } from '../tiling/engine/tree.js';
+import { setTargetRect } from '../tiling/geometryState.js';
 import { copyRect, idOf, WindowMap } from '../tiling/windowMap.js';
 import { unmaximizeWindow } from '../helpers/window.js';
 import { GeomStore } from '../helpers/geomStore.js';
@@ -1822,16 +1823,10 @@ export default GObject.registerClass(
                 let f = window.get_frame_rect();
                 let reached =
                     f.x === rect.x && f.y === rect.y && f.width === rect.width && f.height === rect.height;
-                let hadTarget = state.targetRect;
-                let hasNewTarget =
-                    !hadTarget ||
-                    hadTarget.x !== rect.x ||
-                    hadTarget.y !== rect.y ||
-                    hadTarget.width !== rect.width ||
-                    hadTarget.height !== rect.height;
-
-                // Intent before action: the async ack must find the target already set.
-                state.targetRect = copyRect(rect);
+                // Intent before action: the async ack must find the target already set. A
+                // changed slot also gets a fresh bounded position-repair budget; retries spent
+                // on an older slot must not strand this window at stale coordinates.
+                let hasNewTarget = setTargetRect(state, rect);
 
                 if (reached) {
                     state.posRetries = 0;
